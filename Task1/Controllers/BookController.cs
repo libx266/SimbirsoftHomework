@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
@@ -12,14 +12,19 @@ namespace Task1.Controllers
     [ApiController]
     public class BookController : ControllerBase
     {
-        static Dictionary<String, Func<BookDto, Object>> Sort = new Dictionary<String, Func<BookDto, Object>>
+        protected static Func<BookDto, Object> SortSelect(string sort)
         {
-            {"", B => B.Id },
-            {"AuthorId", B => B.AuthorId },
-            {"AuthorInfo", B => B.AuthorInfo },
-            {"BookTitle", B => B.Title },
-            {"BookGenre", B => B.Genre }
-        };
+            switch(sort)
+            {
+                case "AuthorId": return B => B.AuthorId;
+                case "AuthorFio": return B => B.AuthorInfo;
+                case "BookTitle": return B => B.Title;
+                case "BookGenre": return B => B.Genre;
+                default: return B => B.Id;
+            }
+        }
+        protected static Func<BookDto, bool> Find(string query) =>
+            b => (b.Title + b.Author.ToString() + b.Genre).ToLower().Contains(query);
 
         /// <summary>
         /// 1.4.1.2 Список всех книг по автору
@@ -37,8 +42,14 @@ namespace Task1.Controllers
         /// <param name="sort">Тип сортировки</param>
         /// <returns>Список книг</returns>
         [HttpGet]
-        public IEnumerable<BookDto> Search([FromHeader(Name = "Sort")] string sort = "", string query = "") =>
-            Storage.Books.Where(b => b.Title.Contains(query) || b.Author.ToString().Contains(query)).OrderBy(Sort[sort]);
+        public IEnumerable<BookDto> Search
+        (
+            [FromHeader(Name = "Sort")] 
+            string sort = "", 
+            
+            string query = ""
+        ) 
+        => Storage.Books.Where(Find(query.ToLower())).OrderBy(SortSelect(sort));
 
         /// <summary>
         /// 1.4.2 Добавление книги
